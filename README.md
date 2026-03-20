@@ -1,7 +1,5 @@
 QSAR Modeling • Molecular Docking • Molecular Dynamics
 
-Drug Discovery Course – 2026
-
 This repository showcases my hands-on training and project work completed during the Drug Discovery using QSAR, Docking & Molecular Simulation (2026) program organized by AI and Biotechnology/Bioinformatics.
 
 The program focused on applying artificial intelligence and computational methods to real-world drug discovery workflows using open-source tools.
