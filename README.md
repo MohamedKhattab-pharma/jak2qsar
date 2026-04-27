@@ -255,8 +255,8 @@ Planned evaluation strategies:
 
 ```bash
 ├── full_script.ipynb
-├── bioactivity_raw_data.csv
-├── bioactivity_preprocessed_data.csv
+├── bioactivityJAK2_raw_data.csv
+├── bioactivityJAK2_preprocessed_data.csv
 ├── README.md
 ```
 
