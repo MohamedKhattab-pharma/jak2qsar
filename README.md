@@ -1,48 +1,49 @@
-# 🧬 JAK2 Inhibitor Discovery Pipeline
+# 🧬 JAK2 Inhibitor Discovery using QSAR & Machine Learning
 
-**From Bioactivity Data Mining to Machine Learning–Ready Dataset**
+**End-to-End Pipeline: Data Mining → Feature Engineering → Model Development → Validation**
 
 ---
 
 ## 📌 Project Overview
 
-This project implements a **reproducible, end-to-end computational drug discovery pipeline** targeting **Janus Kinase 2 (JAK2)**. The workflow is designed to bridge **raw bioactivity data acquisition** and **machine learning (ML)-ready dataset construction**, enabling downstream predictive modeling for inhibitor discovery.
+This project implements a **complete computational drug discovery pipeline** for identifying inhibitors of **Janus Kinase 2 (JAK2)** using **Quantitative Structure–Activity Relationship (QSAR) modeling and machine learning**.
 
-The entire pipeline is contained in:
+Unlike basic preprocessing pipelines, this work includes:
+
+* Bioactivity data retrieval from ChEMBL
+* Rigorous data curation and preprocessing
+* Molecular descriptor and fingerprint generation
+* Statistical analysis and chemical space exploration
+* **Supervised machine learning modeling (Random Forest + benchmarking)**
+* **Model validation (Y-randomization)**
+* **Model interpretability using SHAP**
+
+The entire workflow is implemented in:
 
 ```bash
 full_script.ipynb
 ```
 
-Unlike fragmented workflows, this notebook integrates:
-
-* Data retrieval from ChEMBL
-* Systematic preprocessing and curation
-* Bioactivity transformation and labeling
-* Exploratory data analysis (EDA)
-* Preparation for **supervised machine learning (QSAR modeling)**
-
 ---
 
 ## 🎯 Objectives
 
-1. Retrieve **experimentally validated JAK2 bioactivity data**
-2. Standardize and clean molecular and activity data
-3. Convert IC50 values into **quantitative (pIC50)** and **categorical labels**
-4. Analyze dataset structure and quality
-5. Produce a **high-quality dataset suitable for ML model training**
+* Construct a **high-quality QSAR dataset** for JAK2 inhibitors
+* Engineer molecular features using:
+
+  * Lipinski descriptors
+  * PubChem fingerprints (881 bits)
+* Develop predictive models for **bioactivity (pIC50)**
+* Validate model robustness using statistical techniques
+* Identify key molecular features driving activity
 
 ---
 
-## 🧪 Biological Context
+## 🧪 Target Information
 
-* **Target:** Janus Kinase 2 (JAK2)
-* **Role:** Critical in cytokine signaling and hematopoiesis
-* **Clinical relevance:** Dysregulation linked to:
-
-  * Myeloproliferative disorders
-  * Inflammatory diseases
-* **Therapeutic strategy:** Small-molecule kinase inhibitors
+* **Protein:** JAK2 (Janus Kinase 2)
+* **Organism:** Homo sapiens
+* **Bioactivity metric:** IC50 → transformed to pIC50
 
 ---
 
@@ -52,23 +53,12 @@ Unlike fragmented workflows, this notebook integrates:
 
 ### 🔹 1. Data Retrieval (ChEMBL API)
 
-Bioactivity data is programmatically extracted using the `chembl_webresource_client`.
+* Queried ChEMBL for:
 
-**Query criteria:**
+  * Target: JAK2
+  * Activity type: IC50
 
-* Target: JAK2
-* Assay type: Binding / functional assays
-* Activity type: IC50
-
-**Raw dataset contents:**
-
-* `molecule_chembl_id`
-* `canonical_smiles`
-* `standard_value` (IC50)
-* `standard_units`
-* `assay_type`
-
-**Output file:**
+* Raw dataset saved as:
 
 ```bash
 bioactivity_raw_data.csv
@@ -76,178 +66,251 @@ bioactivity_raw_data.csv
 
 ---
 
-### 🔹 2. Data Cleaning & Standardization
+### 🔹 2. Data Curation & Preprocessing
 
-To ensure reliability and reproducibility, the following filters are applied:
+#### ✔️ Cleaning Steps
 
-#### ✔️ Data Integrity Filtering
+* Removed missing IC50 values
+* Removed invalid or empty SMILES
+* Filtered relevant bioactivity entries
 
-* Remove entries with:
+#### ✔️ Initial Classification
 
-  * Missing IC50 values
-  * Missing or invalid SMILES
-* Drop duplicate compounds
+* Active: ≤ 1000 nM
+* Inactive: ≥ 10000 nM
+* Intermediate: removed later
 
-#### ✔️ Unit Normalization
+#### ✔️ Duplicate Handling
 
-* Convert IC50 values to a **consistent unit (nM)**
-* Remove inconsistent or ambiguous measurements
+* Aggregated duplicate compounds using **median IC50 per SMILES**
 
-#### ✔️ Log Transformation
+---
 
-IC50 values are transformed into **pIC50**:
+### 🔹 3. Data Transformation
+
+IC50 values converted to pIC50:
 
 [
 pIC50 = -\log_{10}(IC50 ; [M])
 ]
 
-This step:
+* Enables:
 
-* Stabilizes variance
-* Improves ML model performance
-* Aligns with QSAR best practices
+  * Better distribution
+  * Improved ML performance
 
----
+#### Final Labeling:
 
-### 🔹 3. Bioactivity Classification
-
-Compounds are categorized into discrete classes based on IC50 thresholds:
-
-| Class        | IC50 Range    |
-| ------------ | ------------- |
-| Active       | ≤ 1000 nM     |
-| Inactive     | ≥ 10000 nM    |
-| Intermediate | 1000–10000 nM |
-
-This produces:
-
-* **Regression target:** pIC50
-* **Classification labels:** Active / Inactive
+* Active: pIC50 ≥ 6
+* Inactive: pIC50 < 6
 
 ---
 
 ### 🔹 4. Exploratory Data Analysis (EDA)
 
-EDA is performed to validate dataset quality and uncover trends:
+Performed:
 
-#### 📊 Distribution Analysis
+* pIC50 distribution analysis
+* Class balance visualization
+* Chemical space exploration:
 
-* IC50 / pIC50 distributions
-* Skewness and spread
+  * Molecular Weight vs LogP
+* Boxplots for descriptor comparison
 
-#### 📊 Class Balance
+#### Statistical Testing
 
-* Proportion of active vs inactive compounds
+* **Mann–Whitney U test** applied to:
 
-#### 📊 Structural Insights
+  * pIC50
+  * MW
+  * LogP
+  * H-bond donors/acceptors
 
-* Diversity of SMILES representations
-* Detection of outliers
-
-#### 📊 Data Quality Checks
-
-* Missing values
-* Duplicate molecules
-* Range validation
-
----
-
-## 🤖 Machine Learning Preparation
-
-A key goal of this project is to **prepare the dataset for ML-based drug discovery**.
-
-### ✔️ Dataset Outputs
+Results stored in:
 
 ```bash
-bioactivity_preprocessed_data.csv
+mannwhitney_summary.csv
 ```
 
-Contains:
+---
 
-* Clean SMILES
-* pIC50 values (regression target)
-* Activity class labels (classification target)
+## 🧪 Feature Engineering
 
 ---
 
-### ✔️ ML-Ready Features (Next Step)
+### 🔹 Lipinski Descriptors (RDKit)
 
-Although not fully implemented in this notebook, the dataset is structured for:
+Calculated:
 
-#### Feature Engineering
-
-* Molecular descriptors (e.g., RDKit)
-* Fingerprints:
-
-  * Morgan fingerprints
-  * MACCS keys
-
-#### Modeling Approaches
-
-**Regression Models (Predict pIC50):**
-
-* Linear Regression
-* Random Forest Regressor
-* Gradient Boosting
-* Neural Networks
-
-**Classification Models (Active vs Inactive):**
-
-* Logistic Regression
-* Support Vector Machines (SVM)
-* Random Forest Classifier
-* XGBoost
+* Molecular Weight (MW)
+* LogP
+* Hydrogen bond donors
+* Hydrogen bond acceptors
 
 ---
 
-### ✔️ Evaluation Metrics
+### 🔹 Molecular Fingerprints
 
-Planned evaluation strategies:
+Using PaDEL:
 
-**Regression:**
+* **PubChem fingerprints (881 features)**
+* Additional substructure fingerprints
 
-* R² score
-* RMSE
+Output:
 
-**Classification:**
+```bash
+pubchem_fingerprints.csv
+```
 
-* Accuracy
-* Precision / Recall
-* ROC-AUC
+---
+
+### 🔹 Final QSAR Dataset
+
+Combined:
+
+* Bioactivity data
+* pIC50 values
+* Fingerprints
+
+Final dataset:
+
+```bash
+QSAR_dataset.csv
+```
+
+---
+
+## 🤖 Machine Learning Modeling
+
+---
+
+### 🔹 Problem Type
+
+* **Regression task:** Predict continuous pIC50 values
+
+---
+
+### 🔹 Feature Matrix
+
+* Initial: 881 fingerprint features
+* After variance filtering:
+
+  * Removed low-information features
+  * Reduced dimensionality
+
+---
+
+### 🔹 Model: Random Forest Regressor
+
+* Algorithm: Ensemble learning
+* Trees: 200 estimators
+* Train/Test Split: 80/20
+
+---
+
+### 🔹 Model Performance
+
+* **R² score (test set): ~0.76**
+
+Interpretation:
+
+* Indicates **strong predictive capability**
+* Captures ~76% of variance in bioactivity
+
+---
+
+### 🔹 Visualization
+
+* Predicted vs experimental pIC50 regression plot
+* Confirms correlation and model fit
+
+---
+
+## 🔬 Model Validation
+
+---
+
+### 🔹 Y-Randomization Test
+
+To ensure the model is not due to chance:
+
+* Randomly shuffled target values
+* Retrained model multiple times
+
+**Results:**
+
+* Randomized R² ≈ -0.21
+* Actual R² ≈ 0.76
+
+✔️ Conclusion:
+
+* Model is **statistically valid**
+* Not due to random correlations
+
+---
+
+## ⚖️ Model Benchmarking
+
+---
+
+### 🔹 LazyPredict Comparison
+
+* Evaluated multiple regression models automatically
+* Compared performance across algorithms
+
+Outputs:
+
+* Ranked models by R²
+* Identified best-performing algorithms
+
+---
+
+## 🧠 Model Interpretability
+
+---
+
+### 🔹 SHAP Analysis
+
+Used SHAP (SHapley Additive Explanations) to:
+
+* Identify most important molecular features
+* Understand contribution of fingerprints to predictions
+
+Output:
+
+* SHAP summary plot showing feature importance
 
 ---
 
 ## 📊 Key Results
 
-* Retrieved **~25,000+ bioactivity records** from ChEMBL
+* Built a **complete QSAR pipeline** from raw data to ML model
+* Generated high-dimensional molecular feature space
+* Achieved:
 
-* Generated a **clean, standardized dataset**
+  * **R² ≈ 0.76 (Random Forest)**
+* Validated model robustness via:
 
-* Successfully:
-
-  * Normalized IC50 values
-  * Created pIC50 transformation
-  * Defined activity classes
-
-* Produced a dataset suitable for:
-
-  * QSAR modeling
-  * Virtual screening
-  * Drug discovery pipelines
+  * Y-randomization
+* Identified important structural features using SHAP
 
 ---
 
 ## 🧰 Technologies Used
 
-* **Python (Google Colab)**
-* Core libraries:
+* Python (Google Colab)
+* Libraries:
 
-  * `pandas`
-  * `numpy`
+  * `pandas`, `numpy`
   * `matplotlib`, `seaborn`
+  * `RDKit`
+  * `padelpy`
+  * `scikit-learn`
+  * `LazyPredict`
+  * `SHAP`
 * Data source:
 
-  * ChEMBL API (`chembl_webresource_client`)
+  * ChEMBL API
 
 ---
 
@@ -255,9 +318,13 @@ Planned evaluation strategies:
 
 ```bash
 ├── full_script.ipynb
-├── WorkingScript.ipynb
-├── bioactivityJAK2_raw_data.csv
+├── bioactivity_raw_data.csv
 ├── bioactivityJAK2_preprocessed_data.csv
+├── df_lipinski.csv
+├── pubchem_fingerprints.csv
+├── QSAR_dataset.csv
+├── mannwhitney_summary.csv
+├── EDA_results.zip
 ├── README.md
 ```
 
@@ -268,83 +335,56 @@ Planned evaluation strategies:
 ### ▶️ Google Colab
 
 1. Upload notebook
-2. Install dependencies (if prompted)
-3. Run all cells sequentially
+2. Install dependencies
+3. Run all cells
 
 ---
 
-### ▶️ Local Environment
+### ▶️ Local Setup
 
 ```bash
-pip install pandas numpy matplotlib seaborn chembl_webresource_client
+pip install pandas numpy matplotlib seaborn scikit-learn rdkit padelpy shap lazypredict chembl_webresource_client
 ```
-
-Run using Jupyter Notebook or JupyterLab.
 
 ---
 
 ## ⚠️ Limitations
 
-* Bioactivity data derived from **heterogeneous assays**
-* IC50 variability across experimental conditions
-* No descriptor calculation included yet
-* No ML models implemented (dataset preparation stage only)
+* Bioactivity data from heterogeneous experimental conditions
+* No hyperparameter tuning performed
+* Potential dataset imbalance
+* External validation dataset not included
 
 ---
 
 ## 🔮 Future Work
 
-This project is designed as a **foundation for advanced computational drug discovery**:
-
-### 🔬 Feature Engineering
-
-* RDKit descriptor calculation
-* Molecular fingerprint generation
-
-### 🤖 Machine Learning
-
-* QSAR model training
-* Hyperparameter optimization
-* Cross-validation pipelines
-
-### 🧪 Advanced Modeling
-
-* Deep learning (Graph Neural Networks)
-* Structure-based docking simulations
-
-### 🌍 Real-World Application
-
-* Lead compound prioritization
-* Drug repurposing workflows
-
----
-
-## 📖 Reproducibility
-
-* Fully script-based workflow (no manual edits)
-* All intermediate datasets saved
-* Notebook can be rerun end-to-end
+* Hyperparameter optimization (GridSearch / Bayesian tuning)
+* External validation dataset
+* Deep learning models (GNNs)
+* Molecular docking integration
+* Multi-target prediction
 
 ---
 
 ## 👨‍🔬 Author
 
 Mohamed
-PharmD Student — Computational Drug Design | Bioinformatics
+PharmD Student — Computational Drug Design & Bioinformatics
 
 ---
 
 ## 📜 License
 
-For academic and research use.
+MIT License
 
 ---
 
 ## ⭐ Acknowledgements
 
-* ChEMBL database for bioactivity data
-* Open-source Python ecosystem
-* Google Colab for computational environment
+* ChEMBL database
+* Open-source cheminformatics tools
+* Google Colab
 
 ---
 
