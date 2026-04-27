@@ -318,6 +318,7 @@ Output:
 
 ```bash
 ├── full_script.ipynb
+├── WorkingScript.ipynb
 ├── bioactivity_raw_data.csv
 ├── bioactivityJAK2_preprocessed_data.csv
 ├── df_lipinski.csv
